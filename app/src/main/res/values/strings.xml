@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Wifi Rssi</string>
+    <string name="start_btn">Start</string>
+    <string name="pause_btn">Pause</string>
+    <string name="resume_btn">Resume</string>
+    <string name="ap1">AP1</string>
+</resources>
