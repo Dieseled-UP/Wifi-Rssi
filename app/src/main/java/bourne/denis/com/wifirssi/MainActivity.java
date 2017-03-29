@@ -72,11 +72,9 @@ public class MainActivity extends AppCompatActivity {
             // Timer added to get new scan result once every 2 seconds
             final Timer myTimer = new Timer();
 
-            myTimer.schedule(new TimerTask()
-            {
+            myTimer.schedule(new TimerTask() {
                 @Override
-                public void run()
-                {
+                public void run() {
                     TimerMethod();
                 }
             }, 0, 2000);
@@ -86,8 +84,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Timer method to run at the same time as the main activity
      */
-    private void TimerMethod()
-    {
+    private void TimerMethod() {
         this.runOnUiThread(Timer_Tick);
     }
 
@@ -96,13 +93,10 @@ public class MainActivity extends AppCompatActivity {
      * without crashing out the main thread
      */
     private final Runnable Timer_Tick = () -> {
-        try
-        {
+        try {
             // start a scan of ap's
             mWifiManager.startScan();
-        }
-        catch (final Exception e)
-        {
+        } catch (final Exception e) {
             e.getStackTrace();
         }
     };
@@ -116,16 +110,12 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
 
             // Clear details to refresh the screen for each new scan
-            if (mArrayList.size() > 0)
-            {
-                try
-                {
+            if (mArrayList.size() > 0) {
+                try {
                     mArrayList.clear();
                     mArrayAdapter.clear();
                     mArrayAdapter.notifyDataSetChanged();
-                }
-                catch (final Exception e)
-                {
+                } catch (final Exception e) {
                     e.printStackTrace();
                 }
             }
@@ -139,11 +129,15 @@ public class MainActivity extends AppCompatActivity {
                 // Run through each signal and retrieve the SSID & RSSI
                 for (final ScanResult accessPoint : mResultList) {
 
-                    String apDetails = accessPoint.SSID + "\n" +
-                            String.valueOf(accessPoint.level) + "\n";
+                    if (checkDisplay(accessPoint.SSID )) {
 
-                    // Add to List that will be displayed to user
-                    mArrayList.add(apDetails);
+                        String apDetails = accessPoint.SSID + "\n" +
+                                String.valueOf(accessPoint.level) + "\n";
+
+                        // Add to List that will be displayed to user
+                        mArrayList.add(apDetails);
+                    }
+
                 }
             } catch (Exception e) {
 
@@ -155,6 +149,12 @@ public class MainActivity extends AppCompatActivity {
                     android.R.layout.simple_list_item_1, mArrayList);
             mListView.setAdapter(mArrayAdapter);
         }
+    }
+
+    public boolean checkDisplay(String ssid) {
+
+        return ssid.equalsIgnoreCase("AccessPoint");
+
     }
 
     @Override
