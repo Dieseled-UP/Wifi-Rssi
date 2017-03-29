@@ -1,9 +1,7 @@
 package bourne.denis.com.wifirssi;
 
 import android.Manifest;
-import android.app.AlarmManager;
 import android.app.AlertDialog;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -13,7 +11,6 @@ import android.content.pm.PackageManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -26,6 +23,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -51,13 +50,16 @@ public class MainActivity extends AppCompatActivity {
 
         mListView = (ListView) findViewById(R.id.listView1);
 
+        // Instantiate the WiFi Manager
         mWifiManager = (WifiManager) getApplicationContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
 
+        // Check that the WiFi is enabled
         if (!mWifiManager.isWifiEnabled()) {
             Toast.makeText(getApplicationContext(), "wifi is disabled..making it enabled", Toast.LENGTH_LONG).show();
             mWifiManager.setWifiEnabled(true);
         }
 
+        // Register the Broadcast Receiver
         mWifiScanReceiver = new WifiScanReceiver();
         registerReceiver(mWifiScanReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
 
@@ -66,13 +68,49 @@ public class MainActivity extends AppCompatActivity {
         start.setOnClickListener(v -> {
 
             mArrayList.clear();
-            mWifiManager.startScan();
+
+            // Timer added to get new scan result once every 2 seconds
+            final Timer myTimer = new Timer();
+
+            myTimer.schedule(new TimerTask()
+            {
+                @Override
+                public void run()
+                {
+                    TimerMethod();
+                }
+            }, 0, 2000);
         });
     }
 
-    class WifiScanReceiver extends BroadcastReceiver {
+    /**
+     * Timer method to run at the same time as the main activity
+     */
+    private void TimerMethod()
+    {
+        this.runOnUiThread(Timer_Tick);
+    }
 
-        public static final int REQUEST_CODE = 12345;
+    /**
+     * Runnable thread that allows for scan to be called
+     * without crashing out the main thread
+     */
+    private final Runnable Timer_Tick = () -> {
+        try
+        {
+            // start a scan of ap's
+            mWifiManager.startScan();
+        }
+        catch (final Exception e)
+        {
+            e.getStackTrace();
+        }
+    };
+
+    /**
+     * Broadcast Receiver to capture the WiFi AP information
+     */
+    class WifiScanReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -92,27 +130,27 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
+            // Store all listed AP's
             List<ScanResult> mResultList = mWifiManager.getScanResults();
             Log.d(TAG, "The number of AP's: " + mResultList.size());
 
             try {
 
-                // Run through each signal and retrieve the mac ssid rssi
+                // Run through each signal and retrieve the SSID & RSSI
                 for (final ScanResult accessPoint : mResultList) {
 
-                    String sb = accessPoint.SSID + "\n" +
+                    String apDetails = accessPoint.SSID + "\n" +
                             String.valueOf(accessPoint.level) + "\n";
 
-                    // Add info to StringBuilder
-
                     // Add to List that will be displayed to user
-                    mArrayList.add(sb);
+                    mArrayList.add(apDetails);
                 }
             } catch (Exception e) {
 
                 Log.e(TAG, e.getMessage());
             }
 
+            // Display details in ListView
             mArrayAdapter = new ArrayAdapter<>(getApplicationContext(),
                     android.R.layout.simple_list_item_1, mArrayList);
             mListView.setAdapter(mArrayAdapter);
@@ -121,15 +159,21 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
-        unregisterReceiver(mWifiScanReceiver);
+
         super.onPause();
+
+        // Unregister the Receiver
+        unregisterReceiver(mWifiScanReceiver);
     }
 
     @Override
     protected void onResume() {
+
+        super.onResume();
+
+        // Start scanning again
         registerReceiver(mWifiScanReceiver, new IntentFilter(
                 WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
-        super.onResume();
     }
 
     /**
@@ -160,6 +204,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean addPermission(List<String> permissionsList, String permission) {
+
         if (checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
             permissionsList.add(permission);
             // Check for Rationale Option
@@ -171,7 +216,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+
         switch (requestCode) {
+
             case REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS: {
                 Map<String, Integer> perms = new HashMap<>();
                 // Initial
@@ -203,22 +250,5 @@ public class MainActivity extends AppCompatActivity {
                 .setNegativeButton("Cancel", null)
                 .create()
                 .show();
-    }
-
-    /**
-     * Start background service to get users lat and long
-     * using an alarm manager to run every 5 seconds
-     *
-     */
-    public void scheduleAlarmManger() {
-
-        Log.d(TAG, "AlarmManger has been called");
-
-        Intent alarm = new Intent(getApplicationContext(), WifiScanReceiver.class);
-
-        PendingIntent mPendingIntent = PendingIntent.getBroadcast(this, WifiScanReceiver.REQUEST_CODE, alarm, PendingIntent.FLAG_UPDATE_CURRENT);
-        AlarmManager mAlarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-
-        mAlarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), 5000, mPendingIntent);
     }
 }
