@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
                 // Run through each signal and retrieve the SSID & RSSI
                 for (final ScanResult accessPoint : mResultList) {
 
-                    if (checkDisplay(accessPoint.SSID )) {
+                    if (getAccessPoint(accessPoint.SSID )) {
 
                         String apDetails = accessPoint.SSID + "\n" +
                                 String.valueOf(accessPoint.level) + "\n";
@@ -151,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public boolean checkDisplay(String ssid) {
+    public boolean getAccessPoint(String ssid) {
 
         return ssid.equalsIgnoreCase("AccessPoint");
 
