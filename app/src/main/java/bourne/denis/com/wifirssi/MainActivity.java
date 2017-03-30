@@ -44,8 +44,8 @@ public class MainActivity extends AppCompatActivity {
 
     private final int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 123;
 
-    private static final String REGISTER_URL = "http://pathToUploadFile.php";
-    private static final String KEY_AP = "ap";
+    private static final String REGISTER_URL = "http://pathTo/yourUploadFile.php";
+    private static final String KEY_AP = "ssid";
     private static final String KEY_RSSI = "rssi";
 
     private String ssid;
