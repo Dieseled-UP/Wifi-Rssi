@@ -19,6 +19,11 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,6 +43,14 @@ public class MainActivity extends AppCompatActivity {
     private List<String> mArrayList = new ArrayList<>();
 
     private final int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 123;
+
+    private static final String REGISTER_URL = "pathto/upload/file.php";
+    private static final String KEY_AP = "ap";
+    private static final String KEY_RSSI = "rssi";
+
+    private String ssid;
+    private String rssi;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -129,7 +142,10 @@ public class MainActivity extends AppCompatActivity {
                 // Run through each signal and retrieve the SSID & RSSI
                 for (final ScanResult accessPoint : mResultList) {
 
-                    if (getAccessPoint(accessPoint.SSID )) {
+                    if (getAccessPoint(accessPoint.SSID)) {
+
+                        ssid = accessPoint.SSID;
+                        rssi = String.valueOf(accessPoint.level);
 
                         String apDetails = accessPoint.SSID + "\n" +
                                 String.valueOf(accessPoint.level) + "\n";
@@ -148,12 +164,29 @@ public class MainActivity extends AppCompatActivity {
             mArrayAdapter = new ArrayAdapter<>(getApplicationContext(),
                     android.R.layout.simple_list_item_1, mArrayList);
             mListView.setAdapter(mArrayAdapter);
+
+            StringRequest stringRequest = new StringRequest(Request.Method.POST, REGISTER_URL,
+                    response -> Toast.makeText(MainActivity.this,response,Toast.LENGTH_LONG).show(),
+                    error -> Toast.makeText(MainActivity.this,error.toString(),Toast.LENGTH_LONG).show()){
+                @Override
+                protected Map<String,String> getParams(){
+
+                    Map<String,String> params = new HashMap<>();
+                    params.put(KEY_AP, ssid);
+                    params.put(KEY_RSSI, rssi);
+                    return params;
+                }
+
+            };
+
+            RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
+            requestQueue.add(stringRequest);
         }
     }
 
     public boolean getAccessPoint(String ssid) {
 
-        return ssid.equalsIgnoreCase("AccessPoint");
+        return ssid.equalsIgnoreCase("Wriath");
 
     }
 
