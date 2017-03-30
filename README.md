@@ -16,7 +16,7 @@ To scan all access points ignore this method and remove the if statement from th
 
 
 The Values will be written out to a given database
-I have used Volley to write out the data, you just to change the url to your own destination
+I have used Volley to write out the data, you just need to change the url to your own destination.
     
     private static final String REGISTER_URL = "http://pathTo/yourUploadFile.php";
 
