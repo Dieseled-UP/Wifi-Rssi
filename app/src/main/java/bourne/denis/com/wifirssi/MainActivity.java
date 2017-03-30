@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
 
     private final int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 123;
 
-    private static final String REGISTER_URL = "pathto/upload/file.php";
+    private static final String REGISTER_URL = "http://pathToUploadFile.php";
     private static final String KEY_AP = "ap";
     private static final String KEY_RSSI = "rssi";
 
@@ -186,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
 
     public boolean getAccessPoint(String ssid) {
 
-        return ssid.equalsIgnoreCase("Wriath");
+        return ssid.equalsIgnoreCase("Access Point");
 
     }
 
