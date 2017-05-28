@@ -44,12 +44,14 @@ public class MainActivity extends AppCompatActivity {
 
     private final int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 123;
 
-    private static final String REGISTER_URL = "http://pathTo/yourUploadFile.php";
-    private static final String KEY_AP = "ssid";
+    private static final String REGISTER_URL = "http:/localhost/wifi-rssi-upload.php";
+    private static final String KEY_SSID = "ssid";
     private static final String KEY_RSSI = "rssi";
+    private static final String KEY_DISTANCE = "distance";
 
-    private String ssid;
+    private String name;
     private String rssi;
+    private String distance;
 
 
     @Override
@@ -63,14 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
         mListView = (ListView) findViewById(R.id.listView1);
 
-        // Instantiate the WiFi Manager
-        mWifiManager = (WifiManager) getApplicationContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-
-        // Check that the WiFi is enabled
-        if (!mWifiManager.isWifiEnabled()) {
-            Toast.makeText(getApplicationContext(), "wifi is disabled..making it enabled", Toast.LENGTH_LONG).show();
-            mWifiManager.setWifiEnabled(true);
-        }
+        ensureWifi();
 
         // Register the Broadcast Receiver
         mWifiScanReceiver = new WifiScanReceiver();
@@ -78,20 +73,23 @@ public class MainActivity extends AppCompatActivity {
 
         Button start;
         start = (Button) findViewById(R.id.start);
-        start.setOnClickListener(v -> {
+        start.setOnClickListener(v -> setScheduler());
+    }
 
-            mArrayList.clear();
+    /**
+     * Method to start scheduler that will run a wifi scan every two seconds
+     */
+    private void setScheduler() {
 
-            // Timer added to get new scan result once every 2 seconds
-            final Timer myTimer = new Timer();
+        // Timer added to get new scan result once every 2 seconds
+        final Timer myTimer = new Timer();
 
-            myTimer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    TimerMethod();
-                }
-            }, 0, 2000);
-        });
+        myTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                TimerMethod();
+            }
+        }, 0, 2000);
     }
 
     /**
@@ -109,6 +107,8 @@ public class MainActivity extends AppCompatActivity {
         try {
             // start a scan of ap's
             mWifiManager.startScan();
+
+            Log.i(TAG, "Starting scan");
         } catch (final Exception e) {
             e.getStackTrace();
         }
@@ -122,6 +122,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
 
+            Log.i(TAG, "Clear details to refresh the screen for each new scan");
             // Clear details to refresh the screen for each new scan
             if (mArrayList.size() > 0) {
                 try {
@@ -144,11 +145,18 @@ public class MainActivity extends AppCompatActivity {
 
                     if (getAccessPoint(accessPoint.SSID)) {
 
-                        ssid = accessPoint.SSID;
+                        name = accessPoint.SSID;
+                        Log.i(TAG, name);
+
                         rssi = String.valueOf(accessPoint.level);
+                        Log.i(TAG, rssi);
+
+                        distance = String.valueOf(calculateDistance(accessPoint.level));
+                        Log.i(TAG, distance);
 
                         String apDetails = accessPoint.SSID + "\n" +
-                                String.valueOf(accessPoint.level) + "\n";
+                                String.valueOf(accessPoint.level) + "\n" +
+                                String.valueOf(calculateDistance(accessPoint.level)) + "\n";
 
                         // Add to List that will be displayed to user
                         mArrayList.add(apDetails);
@@ -165,20 +173,23 @@ public class MainActivity extends AppCompatActivity {
                     android.R.layout.simple_list_item_1, mArrayList);
             mListView.setAdapter(mArrayAdapter);
 
+            // Create a StringRequest and add ssid and rssi as the parameters
             StringRequest stringRequest = new StringRequest(Request.Method.POST, REGISTER_URL,
-                    response -> Toast.makeText(MainActivity.this,response,Toast.LENGTH_LONG).show(),
-                    error -> Toast.makeText(MainActivity.this,error.toString(),Toast.LENGTH_LONG).show()){
+                    response -> Toast.makeText(MainActivity.this, response, Toast.LENGTH_SHORT).show(),
+                    error -> Toast.makeText(MainActivity.this, error.toString(), Toast.LENGTH_LONG).show()) {
                 @Override
-                protected Map<String,String> getParams(){
+                protected Map<String, String> getParams() {
 
-                    Map<String,String> params = new HashMap<>();
-                    params.put(KEY_AP, ssid);
+                    Map<String, String> params = new HashMap<>();
+                    params.put(KEY_SSID, name);
                     params.put(KEY_RSSI, rssi);
+                    params.put(KEY_DISTANCE, distance);
                     return params;
                 }
 
             };
 
+            // Create the RequestQueue and add the new StringRequest
             RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
             requestQueue.add(stringRequest);
         }
@@ -186,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
 
     public boolean getAccessPoint(String ssid) {
 
-        return ssid.equalsIgnoreCase("Access Point");
+        return ssid.equalsIgnoreCase("TestPhoneOne");
 
     }
 
@@ -276,6 +287,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Method to handle users input when accepting permissions
+     *
+     * @param message    to display to user
+     * @param okListener click event
+     */
     private void showMessageOKCancel(String message, DialogInterface.OnClickListener okListener) {
         new AlertDialog.Builder(MainActivity.this)
                 .setMessage(message)
@@ -283,5 +300,38 @@ public class MainActivity extends AppCompatActivity {
                 .setNegativeButton("Cancel", null)
                 .create()
                 .show();
+    }
+
+    /**
+     * Method to ensure that the wifi is enabled
+     */
+    private void ensureWifi() {
+
+        // Instantiate the WiFi Manager
+        mWifiManager = (WifiManager) getApplicationContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+
+        // Check that the WiFi is enabled
+        if (!mWifiManager.isWifiEnabled()) {
+            Toast.makeText(getApplicationContext(), "wifi is disabled..making it enabled", Toast.LENGTH_LONG).show();
+            mWifiManager.setWifiEnabled(true);
+        }
+    }
+
+    /**
+     * Method to calculate rssi into distance in meters
+     *
+     * @param value rssi read
+     * @return calculated distance
+     */
+    private double calculateDistance(int value) {
+
+        double distance;
+        // The one meter read and the path-loss exponent
+        double _1MeterRead = -37.91;
+        double pathLossExponent = 2;
+
+        distance = Math.pow(10, ((value - _1MeterRead) / (-10 * pathLossExponent)));
+
+        return distance;
     }
 }
